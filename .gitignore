@@ -225,3 +225,6 @@ secrets.json
 # IDE and editor files
 *.sublime-workspace
 *.sublime-project
+
+# ignore files made by process script
+normalize_to_single_csv.py

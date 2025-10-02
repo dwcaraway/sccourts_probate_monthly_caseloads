@@ -46,6 +46,11 @@ EXPECTED_METRICS = [
     "Pending end of Month"
 ]
 
+EXPECTED_METRICS_MENTAL_HEALTH = [
+    "Added",
+    "Orders"
+]
+
 # Columns C..Q correspond to Excel column indexes 2..16 (0-based indexing)
 # We must ignore columns F, J, and N which are Excel letters F(5), J(9), N(13) (0-based)
 COLUMNNAMES = None  # will be derived per DataFrame if present; otherwise we use positional indices
@@ -304,7 +309,8 @@ def cell_to_number(v):
 
 all_entries = []
 
-excel_files = glob(os.path.join(INPUT_FOLDER, "*.xls*"))
+# TODO remove hardcoded file name
+excel_files = glob(os.path.join(INPUT_FOLDER, "*2023_to_2024.xls*"))
 if not excel_files:
     print("No Excel files found in", INPUT_FOLDER)
 
@@ -352,10 +358,13 @@ for filepath in sorted(excel_files):
 
         print(f"    Found {len(county_rows)} counties in section {section_idx + 1}")
 
-        # For each detected county, the next 4 rows (pos+1 .. pos+4) contain the metrics
+        # For each detected county, the next 4 rows (pos+1 .. pos+4) contain the metrics unless Mental Health in which case it's 2 rows
         for county, excel_row, row_pos in county_rows:
-            # The metric rows are row_pos + 1 .. +4 (0-based)
-            metric_row_positions = [row_pos + i for i in range(1, 5)]
+            # Determine the number of metric rows based on the category
+            if "Mental Health" in category:
+                metric_row_positions = [row_pos + i for i in range(1, 3)]  # Two rows for Mental Health
+            else:
+                metric_row_positions = [row_pos + i for i in range(1, 5)]  # Four rows for other categories
             
             # Ensure we don't exceed DataFrame bounds or section bounds
             if metric_row_positions[-1] >= df.shape[0] or metric_row_positions[-1] >= section_end:
@@ -370,15 +379,26 @@ for filepath in sorted(excel_files):
 
             # Map metric labels to expected metrics (attempt fuzzy/equality match)
             mapped_metrics = []
+            
+            # Determine expected metrics based on category
+            if "Mental Health" in category:
+                expected_metrics_for_category = EXPECTED_METRICS_MENTAL_HEALTH
+            else:
+                expected_metrics_for_category = EXPECTED_METRICS
+            
             for lbl in metric_labels:
                 found = None
-                for expected in EXPECTED_METRICS:
-                    if lbl.lower().startswith(expected.lower()) or expected.lower() in lbl.lower():
+                
+                # Clean up the label (remove asterisks)
+                clean_lbl = lbl.replace("*", "").strip()
+                
+                for expected in expected_metrics_for_category:
+                    if clean_lbl.lower().startswith(expected.lower()) or expected.lower() in clean_lbl.lower():
                         found = expected
                         break
                 if not found:
-                    # fallback: accept the raw label if non-empty
-                    found = lbl if lbl else "Unknown Metric"
+                    # fallback: accept the cleaned label if non-empty
+                    found = clean_lbl if clean_lbl else "Unknown Metric"
                 mapped_metrics.append(found)
 
             # For each metric row, extract month values
@@ -413,6 +433,9 @@ for filepath in sorted(excel_files):
                         "metric": metric_type,
                         "value": value
                     }
+
+                    if value == "nan":
+                        print("    Warning: Detected 'nan' string value")
 
                     all_entries.append(entry)
 
