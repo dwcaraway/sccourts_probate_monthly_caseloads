@@ -250,12 +250,20 @@ def find_county_rows_in_section(df: pd.DataFrame, section_start: int, section_en
     return results
 
 
-def get_month_column_positions(df: pd.DataFrame):
+def get_month_column_positions(df: pd.DataFrame, section_start_row: int = 0):
     """
-    Try to map months to column positions by searching rows 2 through 5 for the word "July".
+    Try to map months to column positions by searching from the section header row for the word "July".
     Once "July" is found, extract column positions that match the MONTH_ORDER entries.
+    
+    Args:
+        df: pandas DataFrame to search
+        section_start_row: Row index where the section starts (header row)
     """
-    for row_idx in range(1, min(5, len(df))):  # Rows 2 through 5 (0-based index is 1 through 4)
+    # Search in a range starting from the section header row
+    search_start = max(0, section_start_row)
+    search_end = min(section_start_row + 5, len(df))  # Search up to 5 rows from section start
+    
+    for row_idx in range(search_start, search_end):
         row_values = df.iloc[row_idx].astype(str).str.strip().str.lower()
         try:
             # Find the first occurrence of "july" in the row
@@ -273,7 +281,7 @@ def get_month_column_positions(df: pd.DataFrame):
         except IndexError:
             continue
 
-    print("Warning: Could not find matching months header, falling back")
+    print(f"Warning: Could not find matching months header starting from row {section_start_row}, falling back")
 
     # Fallback to positional mapping if no match is found
     max_index = df.shape[1] - 1
@@ -309,8 +317,7 @@ def cell_to_number(v):
 
 all_entries = []
 
-# TODO remove hardcoded file name
-excel_files = glob(os.path.join(INPUT_FOLDER, "*2023_to_2024.xls*"))
+excel_files = glob(os.path.join(INPUT_FOLDER, "*.xls*"))
 if not excel_files:
     print("No Excel files found in", INPUT_FOLDER)
 
@@ -346,7 +353,7 @@ for filepath in sorted(excel_files):
         section_start = header_row_idx
 
         # Determine month columns positions to extract (12 positions) for this section
-        month_cols = get_month_column_positions(df)
+        month_cols = get_month_column_positions(df, header_row_idx)
         if len(month_cols) != 12:
             print(f"    Warning: Expected 12 month columns but found {len(month_cols)}; continuing with detected columns.")
 
@@ -433,9 +440,6 @@ for filepath in sorted(excel_files):
                         "metric": metric_type,
                         "value": value
                     }
-
-                    if value == "nan":
-                        print("    Warning: Detected 'nan' string value")
 
                     all_entries.append(entry)
 

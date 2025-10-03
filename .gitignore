@@ -227,4 +227,4 @@ secrets.json
 *.sublime-project
 
 # ignore files made by process script
-normalize_to_single_csv.py
+*.csv
