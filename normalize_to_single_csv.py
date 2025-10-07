@@ -32,7 +32,8 @@ SC_COUNTIES = [
     "Darlington","Dillon","Dorchester","Edgefield","Fairfield","Florence","Georgetown",
     "Greenville","Greenwood","Hampton","Horry","Jasper","Kershaw","Lancaster","Laurens",
     "Lee","Lexington","Marion","Marlboro","McCormick","Newberry","Oconee","Orangeburg",
-    "Pickens","Richland","Roswell","Saluda","Spartanburg","Sumter","Union","Williamsburg"
+    "Pickens","Richland","Roswell","Saluda","Spartanburg","Sumter","Union","Williamsburg",
+    "York"
 ]
 
 # NOTE: The above list must contain the exact county names as they appear in Column A.
@@ -425,17 +426,29 @@ for filepath in sorted(excel_files):
                         raw_value = None
                     value = cell_to_number(raw_value)
 
+                    # Skip entries with None, but values of Zero are valid.
+                    if value is None:
+                        continue
+
                     # Adjust year based on the month: July through December -> year_start, else -> year_end
                     if month.lower() in ["july", "august", "september", "october", "november", "december"]:
                         year_for_entry = year_start
                     else:
                         year_for_entry = year_end
 
+                    # Convert month name + resolved year into YYYY-MM
+                    _month_num_map = {
+                        "January": 1, "February": 2, "March": 3, "April": 4,
+                        "May": 5, "June": 6, "July": 7, "August": 8,
+                        "September": 9, "October": 10, "November": 11, "December": 12
+                    }
+                    mnum = _month_num_map.get(month, 1)
+
                     entry = {
                         "file": os.path.basename(filepath),
-                        "category": category,  # Add category field
+                        "category": category,
+                        "month": mnum,
                         "year": year_for_entry,
-                        "month": month,
                         "county": county,
                         "metric": metric_type,
                         "value": value

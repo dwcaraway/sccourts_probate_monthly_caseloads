@@ -228,3 +228,7 @@ secrets.json
 
 # ignore files made by process script
 *.csv
+*.pbix
+
+# ignore the topojson files, should be regenerated
+topojson/
